@@ -19,7 +19,7 @@ def regression(dt_input=0, dx_input=0):
     return np.linalg.inv(A.T @ A) @ A.T @ modified_x
 
 XLIM = [35, 54]
-T = np.linspace(*XLIM, 100)
+T = np.linspace(*XLIM, 400)
 
 mean_reg = regression()
 x0, c = mean_reg
@@ -52,14 +52,39 @@ dx0 = np.sqrt(cov[1,1])
 dcx2 = cov[1,0]
 t0 = -x0/c
 
+xbar = np.mean(x)
+tbar = np.mean(t)
+
 print(cov)
 #x = ct-x0
 #var(x) = np.sqrt(t**2*cov[0,0]-cov[1,1] + 2*t*cov[1,0])
 
 
 
+
+
+
+nominal = 2.99792458 * 10
+b = np.mean(x-t*nominal)
+print(-b/c)
+plot.plot(T, T*nominal + b, label=f'Nominal Value of c (m=29.98, b={round(b, 2)})', linestyle='--', color='green')
+plot.plot(T, T * c + x0, label='Regression (m=%.2f±%.2f, b=%.2f±%.2f)' % (c, dc, x0, dx0), linestyle='-', color='#fa0')
+#plot.plot(T, T * (c+dc) + x0 + dx0, label='Slope up', linestyle='--', color='#f00')
+#plot.plot(T, T * (c-dc) + x0 - dx0, label='Slope down', linestyle='--', color='#f00')
+plot.scatter(tbar, xbar)
+
+f0 = np.array([tbar, xbar])
+ct = (1+c**2-dc**2)/np.sqrt(((c-dc)**2+1)*((c+dc)**2+1))
+f1 = np.array([1, c-dc])/np.sqrt((c-dc)**2+1)*np.sqrt((np.mean(dx**2) + np.mean(dt**2))/2/(1+ct))
+f2 = np.array([-c-dc, -1])/np.sqrt((c+dc)**2+1)*np.sqrt((np.mean(dx**2) + np.mean(dt**2))/2/(1+ct))
+
+HT = np.linspace(0, 100, 100)
+hyp = np.stack((f0 for _ in HT), axis=1) + np.array([f1[0]*HT, f1[1]*HT]) + np.array([f2[0]/HT, f2[1]/HT])
+
+plot.plot(hyp[0], hyp[1], color='#f00')
+
 plot.errorbar(t, x, dx, dt, capsize=3, fmt='none', label='Data', color='#b20')
-plot.plot(T, T * c + x0, label='Regression (m=%.2f±%.2f, b=%.2f±%.2f)' % (c, dc, x0, dx0), linestyle='--')
+
 
 #xstd_plus = np.sqrt(T**2*cov[0,0]+cov[1,1] + 2*T*cov[1,0])
 #xstd_minus = np.sqrt(T**2*cov[0,0]+cov[1,1] - 2*T*cov[1,0])
