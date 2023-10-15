@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plot
 
 theta = np.array([180, 182, 185, 187, 190, 192, 195, 197, 200, 202, 205, 210, 215])
-dtheta = 0.5
+dtheta = 0.5*np.ones_like(theta)
 
 trials = [
     [322, 209, 284, 308, 298, 303, 323, 323, 299, 291], #180
@@ -22,7 +22,6 @@ trials = [
 
 
 trials = np.array(list(map(np.array, trials)))
-print(trials)
 
 means = np.array([np.mean(arr) for arr in trials])
 sigma = np.array([np.std(arr) for arr in trials])
@@ -30,13 +29,24 @@ sigma = np.array([np.std(arr) for arr in trials])
 t = np.linspace(theta[0], theta[-1], 100)
 t_doubled = np.linspace(360-theta[-1], theta[-1], 100)
 
-linearized = np.sqrt(-np.log(means/max(means)))
-linearized_up = np.sqrt(-np.log((means+sigma)/max(means+sigma)))
-linearized_down = np.sqrt(-np.log((means-sigma)/max(means-sigma)))
+normalization = means[1]
 
-mean_slope = np.mean(linearized)/np.mean(theta-180)
-slope_up = np.mean(linearized_up)/np.mean(theta-0.5-180)
-slope_down = np.mean(linearized_down)/np.mean(theta+0.5-180)
+linearized = np.sqrt(-np.log(means/normalization))
+
+max_sigma = sigma[means.tolist().index(normalization)]
+dlin = -0.5 / linearized / means * (sigma - means/normalization * max_sigma)
+
+print(linearized)
+print(means)
+print(sigma)
+print(dlin)
+
+without = lambda x, i: np.array([*x[:i], *x[i+1:]])
+
+slope = np.sum(linearized)/np.sum(theta-180)
+dslope = np.abs(np.sum(without(dlin, 1))/np.sum(without(theta, 1)-180) - np.sum(without(linearized, 1))/np.sum(without(theta, 1)-180)**2 * np.sum(without(dtheta, 1)))
+
+print(slope, dslope)
 
 """
 plot.plot(theta, linearized)
@@ -49,9 +59,9 @@ plot.show()
 
 plot.errorbar(np.concatenate([list(reversed(360-theta)), theta]), np.concatenate([list(reversed(means)), means]), yerr=np.concatenate([list(reversed(sigma)), sigma]), xerr=0.5, capsize=2, color='#b20', label='Data', fmt='none')
 
-plot.plot(t_doubled, means[1]*np.exp(-((t_doubled-180)*mean_slope)**2), label='Gaussian Fit', color='green')
+plot.plot(t_doubled, means[1]*np.exp(-((t_doubled-180)*slope)**2), label='Gaussian Fit', color='green')
 
-#plot.fill_between(t_doubled, (means[1]+sigma[1])*np.exp(-((t_doubled-180)*slope_up)**2), (means[1]-sigma[1])*np.exp(-((t_doubled-180)*slope_down)**2), color='#01f', alpha=0.2, linewidth=0)
+plot.fill_between(t_doubled, (means[1]+sigma[1])*np.exp(-((t_doubled-180)*(slope-dslope))**2), (means[1]-sigma[1])*np.exp(-((t_doubled-180)*(slope+dslope))**2), color='#01f', alpha=0.2, linewidth=0)
 
 plot.xlabel(r'$\theta$°')
 plot.ylabel('Scintillator Counts')
